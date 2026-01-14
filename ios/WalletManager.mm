@@ -22,8 +22,8 @@ WalletManagerImpl *walletManager = [[WalletManagerImpl alloc] init];
     return std::make_shared<facebook::react::NativeWalletManagerSpecJSI>(params);
 }
 
-- (void)addPassFromUrl:(nonnull NSString *)url resolve:(nonnull RCTPromiseResolveBlock)resolve reject:(nonnull RCTPromiseRejectBlock)reject {
-  [walletManager addPassFromUrl:url completion:^(BOOL added) {
+- (void)addPassFromUrl:(nonnull NSString *)url headers:(nullable NSDictionary *)headers resolve:(nonnull RCTPromiseResolveBlock)resolve reject:(nonnull RCTPromiseRejectBlock)reject {
+  [walletManager addPassFromUrl:url headers:headers completion:^(BOOL added) {
          resolve(@(added));
      }];
 }

@@ -36,8 +36,9 @@ public class WalletManagerImpl: NSObject, @preconcurrency PKAddPassesViewControl
 
   // MARK: - addPassFromUrl
 
-  @MainActor @objc(addPassFromUrl:completion:)
+  @MainActor @objc(addPassFromUrl:headers:completion:)
   public func addPassFromUrl(_ passUrlString: String,
+                             headers: [String: String]?,
                              completion: @escaping (Bool) -> Void
   ) {
     guard let url = URL(string: passUrlString) else {
@@ -45,15 +46,43 @@ public class WalletManagerImpl: NSObject, @preconcurrency PKAddPassesViewControl
       print("wallet", "The pass URL is invalid")
       return
     }
-    
-    guard let data = try? Data(contentsOf: url) else {
-      completion(false)
-      print("wallet", "The pass data is invalid")
-      return
+
+    var request = URLRequest(url: url)
+    request.httpMethod = "GET"
+
+    // Add custom headers (for authentication)
+    if let headers = headers {
+      for (key, value) in headers {
+        request.setValue(value, forHTTPHeaderField: key)
+      }
     }
-    
-    self.showViewController(with: data)
-    self.completion = completion
+
+    URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+      guard let self = self else { return }
+
+      if let error = error {
+        print("wallet", "Network error: \(error.localizedDescription)")
+        DispatchQueue.main.async { completion(false) }
+        return
+      }
+
+      if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
+        print("wallet", "HTTP error: \(httpResponse.statusCode)")
+        DispatchQueue.main.async { completion(false) }
+        return
+      }
+
+      guard let data = data else {
+        print("wallet", "The pass data is invalid")
+        DispatchQueue.main.async { completion(false) }
+        return
+      }
+
+      DispatchQueue.main.async {
+        self.showViewController(with: data)
+        self.completion = completion
+      }
+    }.resume()
   }
 
   // MARK: - hasPass

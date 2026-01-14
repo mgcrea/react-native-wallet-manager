@@ -21,7 +21,8 @@ export default {
   },
   addPassFromUrl:
     Platform.OS === 'ios'
-      ? WalletManager.addPassFromUrl
+      ? (url: string, headers?: Record<string, string>) =>
+          WalletManager.addPassFromUrl(url, headers ?? null)
       : (url: string) => Linking.openURL(url),
   hasPass: async (cardIdentifier: string, serialNumber?: string) => {
     if (Platform.OS === 'android') {
