@@ -20,7 +20,6 @@ export type WalletErrorCode =
  */
 export type WalletError = Error & {
   code: WalletErrorCode;
-  message: string;
 };
 
 export default {

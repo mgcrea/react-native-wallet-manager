@@ -66,7 +66,7 @@ public class WalletManagerImpl: NSObject, @preconcurrency PKAddPassesViewControl
         return
       }
 
-      if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
+      if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
         DispatchQueue.main.async {
           completion(false, "HTTP_ERROR", "HTTP \(httpResponse.statusCode)")
         }
@@ -156,7 +156,11 @@ public class WalletManagerImpl: NSObject, @preconcurrency PKAddPassesViewControl
       return
     }
 
-    guard let root = UIApplication.shared.keyWindow?.rootViewController else {
+    guard let windowScene = UIApplication.shared.connectedScenes
+      .compactMap({ $0 as? UIWindowScene })
+      .first(where: { $0.activationState == .foregroundActive }),
+      let root = windowScene.windows.first(where: { $0.isKeyWindow })?.rootViewController
+    else {
       addPassCompletion(false, "NO_VIEW_CONTROLLER", "No root view controller found")
       return
     }
