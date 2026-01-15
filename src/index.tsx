@@ -1,19 +1,25 @@
-import { Linking, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import WalletManager from './specs/NativeWalletManager';
 
 /**
  * Error codes that can be thrown by addPassFromUrl
  */
 export type WalletErrorCode =
+  // Shared error codes
   | 'INVALID_URL'
   | 'NETWORK_ERROR'
   | 'HTTP_ERROR'
+  | 'USER_CANCELLED'
+  // iOS-specific error codes
   | 'INVALID_DATA'
   | 'INVALID_PASS'
   | 'PASS_ALREADY_EXISTS'
   | 'NO_VIEW_CONTROLLER'
   | 'CONTROLLER_ERROR'
-  | 'USER_CANCELLED';
+  // Android-specific error codes
+  | 'NO_ACTIVITY'
+  | 'API_ERROR'
+  | 'GENERAL_ERROR';
 
 /**
  * Error object thrown when addPassFromUrl fails
@@ -40,11 +46,8 @@ export default {
     }
     return await WalletManager.addPassToGoogleWallet(jwt);
   },
-  addPassFromUrl:
-    Platform.OS === 'ios'
-      ? (url: string, headers?: Record<string, string>) =>
-          WalletManager.addPassFromUrl(url, headers ?? null)
-      : (url: string) => Linking.openURL(url),
+  addPassFromUrl: (url: string, headers?: Record<string, string>) =>
+    WalletManager.addPassFromUrl(url, headers ?? null),
   hasPass: async (cardIdentifier: string, serialNumber?: string) => {
     if (Platform.OS === 'android') {
       throw new Error('hasPass method not available on Android');
