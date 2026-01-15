@@ -1,6 +1,28 @@
 import { Linking, Platform } from 'react-native';
 import WalletManager from './specs/NativeWalletManager';
 
+/**
+ * Error codes that can be thrown by addPassFromUrl
+ */
+export type WalletErrorCode =
+  | 'INVALID_URL'
+  | 'NETWORK_ERROR'
+  | 'HTTP_ERROR'
+  | 'INVALID_DATA'
+  | 'INVALID_PASS'
+  | 'PASS_ALREADY_EXISTS'
+  | 'NO_VIEW_CONTROLLER'
+  | 'CONTROLLER_ERROR'
+  | 'USER_CANCELLED';
+
+/**
+ * Error object thrown when addPassFromUrl fails
+ */
+export type WalletError = Error & {
+  code: WalletErrorCode;
+  message: string;
+};
+
 export default {
   canAddPasses: async () => {
     return await WalletManager.canAddPasses();

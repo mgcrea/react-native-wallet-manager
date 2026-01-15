@@ -12,7 +12,7 @@ import PassKit
 public class WalletManagerImpl: NSObject, @preconcurrency PKAddPassesViewControllerDelegate {
   private var pass: PKPass?
   private var passLibrary: PKPassLibrary?
-  private var completion: ((Bool) -> Void)?
+  private var completion: ((Bool, String?, String?) -> Void)?
 
   // MARK: - canAddPasses
 
@@ -39,11 +39,10 @@ public class WalletManagerImpl: NSObject, @preconcurrency PKAddPassesViewControl
   @MainActor @objc(addPassFromUrl:headers:completion:)
   public func addPassFromUrl(_ passUrlString: String,
                              headers: [String: String]?,
-                             completion: @escaping (Bool) -> Void
+                             completion: @escaping (Bool, String?, String?) -> Void
   ) {
     guard let url = URL(string: passUrlString) else {
-      completion(false)
-      print("wallet", "The pass URL is invalid")
+      completion(false, "INVALID_URL", "The pass URL is invalid")
       return
     }
 
@@ -61,20 +60,23 @@ public class WalletManagerImpl: NSObject, @preconcurrency PKAddPassesViewControl
       guard let self = self else { return }
 
       if let error = error {
-        print("wallet", "Network error: \(error.localizedDescription)")
-        DispatchQueue.main.async { completion(false) }
+        DispatchQueue.main.async {
+          completion(false, "NETWORK_ERROR", error.localizedDescription)
+        }
         return
       }
 
       if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
-        print("wallet", "HTTP error: \(httpResponse.statusCode)")
-        DispatchQueue.main.async { completion(false) }
+        DispatchQueue.main.async {
+          completion(false, "HTTP_ERROR", "HTTP \(httpResponse.statusCode)")
+        }
         return
       }
 
       guard let data = data else {
-        print("wallet", "The pass data is invalid")
-        DispatchQueue.main.async { completion(false) }
+        DispatchQueue.main.async {
+          completion(false, "INVALID_DATA", "No data received")
+        }
         return
       }
 
@@ -142,8 +144,7 @@ public class WalletManagerImpl: NSObject, @preconcurrency PKAddPassesViewControl
 
   @MainActor private func showViewController(with data: Data) {
     guard let pass = try? PKPass(data: data) else {
-      addPassCompletion(false)
-      print("wallet", "The pass is invalid")
+      addPassCompletion(false, "INVALID_PASS", "Failed to parse pass data")
       return
     }
 
@@ -151,13 +152,13 @@ public class WalletManagerImpl: NSObject, @preconcurrency PKAddPassesViewControl
     self.passLibrary = PKPassLibrary()
 
     if self.passLibrary?.containsPass(pass) == true {
-      addPassCompletion(false)
-      return print("wallet", "pass already added")
+      addPassCompletion(false, "PASS_ALREADY_EXISTS", "This pass is already in your wallet")
+      return
     }
 
     guard let root = UIApplication.shared.keyWindow?.rootViewController else {
-      addPassCompletion(false)
-      return print("wallet", "No rootViewController found")
+      addPassCompletion(false, "NO_VIEW_CONTROLLER", "No root view controller found")
+      return
     }
 
     var top = root
@@ -166,8 +167,8 @@ public class WalletManagerImpl: NSObject, @preconcurrency PKAddPassesViewControl
     }
 
     guard let controller = PKAddPassesViewController(pass: pass) else {
-      addPassCompletion(false)
-      return print("wallet", "no PKAddPassesViewController")
+      addPassCompletion(false, "CONTROLLER_ERROR", "Failed to create pass controller")
+      return
     }
     controller.delegate = self
 
@@ -183,7 +184,12 @@ public class WalletManagerImpl: NSObject, @preconcurrency PKAddPassesViewControl
       if
          let pass = self.pass,
          let library = self.passLibrary {
-        addPassCompletion(library.containsPass(pass))
+        let wasAdded = library.containsPass(pass)
+        if wasAdded {
+          addPassCompletion(true, nil, nil)
+        } else {
+          addPassCompletion(false, "USER_CANCELLED", "User cancelled or declined to add pass")
+        }
       }
       self.passLibrary = nil
       self.pass = nil
@@ -192,9 +198,9 @@ public class WalletManagerImpl: NSObject, @preconcurrency PKAddPassesViewControl
   }
 
   // MARK: - Helper
-  
-  private func addPassCompletion(_ result: Bool) {
-    self.completion?(result)
+
+  private func addPassCompletion(_ success: Bool, _ errorCode: String?, _ errorMessage: String?) {
+    self.completion?(success, errorCode, errorMessage)
     self.completion = nil
   }
 
