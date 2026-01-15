@@ -79,8 +79,8 @@ public class WalletManagerImpl: NSObject, @preconcurrency PKAddPassesViewControl
       }
 
       DispatchQueue.main.async {
-        self.showViewController(with: data)
         self.completion = completion
+        self.showViewController(with: data)
       }
     }.resume()
   }
